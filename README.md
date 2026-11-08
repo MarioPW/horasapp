@@ -6,8 +6,9 @@ App de seguimiento de turnos y nómina estimada para trabajadores por horas en C
 ## Flujo
 
 1. **Dashboard** → registra turnos día a día (fecha, entrada, salida; cruce de medianoche soportado).
-2. **Ajustes** → configura una vez valor de la hora, % salud, % pensión y tipo de contrato (Firestore `users/{uid}`).
-3. **Historial** → selecciona el corte (desde/hasta) y pulsa **Calcular Nómina**: se traen los turnos
+2. **Datos laborales** → configura una vez valor de la hora, % salud, % pensión y tipo de contrato (Firestore `users/{uid}`).
+3. **Historial** → lista los turnos con filtro por mes y acciones de editar/eliminar.
+4. **Nómina** → selecciona el corte (desde/hasta) y pulsa **Calcular Nómina**: se traen los turnos
    del rango y se aplica la legislación colombiana con tu configuración.
 
 ## Estructura
@@ -15,7 +16,7 @@ App de seguimiento de turnos y nómina estimada para trabajadores por horas en C
 ```
 src/
 ├── main.jsx                      # Bootstrap + AuthProvider + SettingsProvider + App
-├── app.jsx                       # Shell, router por hash (/#/ , /#/historial), modal de ajustes
+├── app.jsx                       # Shell, router por hash (/#/ , /#/historial , /#/nomina), modal de ajustes
 ├── config/firebaseConfig.js      # Skeleton de credenciales (tuyas)
 ├── hooks/useHashRoute.js         # Router mínimo sin dependencias
 ├── services/                     # Única capa que toca Firestore/Auth
@@ -38,8 +39,9 @@ src/
     ├── Modal.jsx                 # Modal controlado (sin JS de Bootstrap)
     ├── SettingsModal.jsx         # Configuración base → users/{uid}
     ├── Dashboard.jsx             # Daily Shift Logger + stats del mes
-    ├── ShiftHistory.jsx          # Lista, editar/eliminar, corte + Calcular Nómina
+    ├── ShiftHistory.jsx          # Solo lista de turnos: filtro por mes + editar/eliminar
     ├── ShiftEditModal.jsx
+    ├── PayrollCalc.jsx           # Corte desde/hasta + Calcular Nómina (ruta /#/nomina)
     └── PayrollSummary.jsx        # Desglose devengos/deducciones/prestaciones
 ```
 
@@ -102,3 +104,28 @@ service cloud.firestore {
 | `pnpm dev` | Servidor de desarrollo |
 | `pnpm build` | Build de producción |
 | `pnpm preview` | Vista previa del build |
+| `pnpm run deploy` | Build + despliegue a Firebase Hosting (`horasapp-e3710`) |
+| `pnpm run deploy:preview` | Build + despliegue a un canal de preview temporal |
+
+> ⚠️ **Nota:** el comando literal `pnpm deploy` está reservado por pnpm (su CLI
+> propio para desplegar paquetes de workspaces) y **no** ejecuta scripts de
+> `package.json`. Por eso el despliegue se lanza con `pnpm run deploy`.
+
+## Despliegue (Firebase Hosting)
+
+```bash
+pnpm install
+npx firebase login        # solo la primera vez (autenticación interactiva)
+pnpm run deploy           # vite build + firebase deploy --only hosting
+```
+
+1. `firebase.json` publica `dist/` con rewrite SPA (`**` → `/index.html`) y
+   caché inmutable para `/assets/**` (archivos hasheados por Vite).
+2. `.firebaserc` apunta al proyecto **`horasapp-e3710`** (mismo proyecto que
+   `src/config/firebaseConfig.js`).
+3. Requisitos en consola de Firebase: habilita **Authentication** (Email/Password
+   y Google), publica las reglas de Firestore de arriba y agrega el dominio del
+   Hosting (y `localhost` para desarrollo) en
+   *Authentication → Settings → Authorized domains*.
+4. Despliegue en CI: usa `FIREBASE_TOKEN` (generado con
+   `npx firebase login:ci`) como secreto y ejecuta `pnpm run deploy`.

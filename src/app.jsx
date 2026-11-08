@@ -5,6 +5,7 @@ import Login from './components/Login.jsx';
 import Navbar from './components/Navbar.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import ShiftHistory from './components/ShiftHistory.jsx';
+import PayrollCalc from './components/PayrollCalc.jsx';
 import SettingsModal from './components/SettingsModal.jsx';
 
 const GUEST = { displayName: 'Invitado', email: null };
@@ -50,9 +51,9 @@ export default function App() {
 
       <main className="flex-grow-1 py-4 py-md-5 px-3 px-md-4">
         <div className="container-xxl">
-          {route === '/historial' ? (
-            <ShiftHistory onOpenSettings={openSettings} />
-          ) : (
+          {route === '/historial' && <ShiftHistory />}
+          {route === '/nomina' && <PayrollCalc onOpenSettings={openSettings} />}
+          {!['/historial', '/nomina'].includes(route) && (
             <Dashboard onOpenSettings={openSettings} />
           )}
         </div>

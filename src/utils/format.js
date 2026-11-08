@@ -38,6 +38,12 @@ export const formatDayAbbr = (iso) =>
     .format(new Date(`${iso}T00:00:00`))
     .replace('.', '');
 
+/** 'noviembre de 2026' — etiqueta legible para un mes YYYY-MM. */
+export const formatMonth = (yyyymm) =>
+  new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric' }).format(
+    new Date(`${yyyymm}-01T00:00:00`),
+  );
+
 export const formatDayName = (iso) =>
   new Intl.DateTimeFormat('es-CO', { weekday: 'long' })
     .format(new Date(`${iso}T00:00:00`))
