@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Horasapp">
+  <defs>
+    <linearGradient id="ha" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4f46e5" />
+      <stop offset="0.55" stop-color="#6366f1" />
+      <stop offset="1" stop-color="#3b82f6" />
+    </linearGradient>
+  </defs>
+
+  <!-- Sobre redondeado (mismo radio que bs-border-radius proporcional) -->
+  <rect width="64" height="64" rx="15" fill="url(#ha)" />
+
+  <!-- Esfera del reloj -->
+  <circle cx="32" cy="32" r="17.5" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.95" />
+
+  <!-- Punteras: 12:00 → 4:00 (hora de trabajo) -->
+  <path
+    d="M32 21.5V32l7.5 4.5"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Centro de la esfera -->
+  <circle cx="32" cy="32" r="2.6" fill="#ffffff" />
+
+  <!-- Marca de las 12 -->
+  <path d="M32 16.5v3" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.9" />
+</svg>

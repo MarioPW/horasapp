@@ -1,14 +1,15 @@
-# OpenCode Agent Skill & Standard Rules
+# Horasapp Agent Guidelines
 
-## 1. Tech Stack & Dependencies
-- **UI:** Preact (use hooks explicitly from `preact/hooks`, Preact JSX).
-- **Styling:** Bootstrap 5 (prefer native Bootstrap utility classes, use modular CSS only if strictly necessary).
-- **State & Data:** Local hooks for component UI state, Preact Context API for global state (Auth/User).
-- **Backend:** Firebase Web SDK v9+ (Modular/Tree-shakable: Auth + Firestore).
-- **Package Manager:** pnpm.
+## Tech Stack
+- **Core:** Preact (`preact/hooks`), Vite, Bootstrap 5.
+- **Backend:** Firebase modular v9+ (Auth + Firestore). Pkg: `pnpm`.
 
-## 2. Code Style & Architecture Constraints
-- **Pure Domain Logic:** All Colombian payroll calculations (overtime, night shifts, mandatory health/pension deductions) MUST live inside pure functions in `src/utils/`. NEVER compute payroll inside JSX or UI Components.
-- **Firebase Abstraction:** Database and Authentication calls must be fully abstracted inside `src/services/`. Components should only invoke wrapper functions like `savePayrollDraft(data)`.
-- **Currency & Formatting:** Always use `Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' })` for monetary output formatting.
-- **Token Efficiency:** Write concise, clean, and properly typed code. Avoid unnecessary boilerplate or verbose comments unless explaining complex Colombian labor law rules.
+## Architecture & Constraints
+- **Pure Logic:** All Colombian payroll/labor logic (overtime, surcharges, deductions) MUST reside in `src/utils/`. Zero calculation logic inside JSX/components.
+- **Service Layer:** All Firebase/Auth calls isolated in `src/services/`. Components consume wrapper functions only.
+- **Formatting:** Use `Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' })` for currency.
+
+## ⚡ Token Efficiency Directives (Zero Waste)
+- **Code Only / No Filler:** Omit conversational preambles, generic greetings, and post-code explanations unless explicitly asked. Output only the requested code blocks or diffs.
+- **Concise Snippets:** Provide direct, target-focused code modifications instead of rewriting entire unedited files. Use clean placeholders (`// ... existing code ...`) for large files.
+- **Terse Communication:** When answering conceptual or debugging questions, use dense bullet points and technical shorthand. Never restate user prompts.

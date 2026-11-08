@@ -5,4 +5,5 @@ dist-ssr
 .env.local
 .env.*.local
 *.log
+.firebase/
 .DS_Store
