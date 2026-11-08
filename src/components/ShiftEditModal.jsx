@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import Modal from './Modal.jsx';
 import { todayISO } from '../utils/dates.js';
+import { listShiftsInRange } from '../services/shifts.js';
+import { findDayConflict } from '../utils/shiftConflicts.js';
 
 export default function ShiftEditModal({ shift, onClose, onSave }) {
   const [form, setForm] = useState({ date: '', startTime: '', endTime: '' });
@@ -26,6 +28,20 @@ export default function ShiftEditModal({ shift, onClose, onSave }) {
     setSaving(true);
     setError('');
     try {
+      // Ignora el turno en edición (excludeId) para no auto-colisionar
+      const sameDay = await listShiftsInRange(form.date, form.date);
+      const conflict = findDayConflict({
+        shifts: sameDay,
+        date: form.date,
+        startTime: form.startTime,
+        endTime: form.endTime,
+        excludeId: shift?.id,
+      });
+      if (conflict) {
+        setError(conflict.message);
+        setSaving(false);
+        return;
+      }
       await onSave(form);
     } catch (err) {
       setError(err.message);

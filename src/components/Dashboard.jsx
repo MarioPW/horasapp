@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'preact/hooks';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
-import { saveShift, listShifts } from '../services/shifts.js';
+import { saveShift, listShifts, listShiftsInRange } from '../services/shifts.js';
 import { computeShiftDuration, totalHours } from '../utils/payrollCalculator.js';
+import { findDayConflict } from '../utils/shiftConflicts.js';
 import { todayISO, startOfMonthISO } from '../utils/dates.js';
 import { formatCOP, formatHours } from '../utils/format.js';
-import { getContract } from '../utils/constants.js';
+import { getContract, getTransportMode } from '../utils/constants.js';
 
 export default function Dashboard({ onOpenSettings }) {
   const { configured } = useAuth();
@@ -46,6 +47,19 @@ export default function Dashboard({ onOpenSettings }) {
 
     setSaving(true);
     try {
+      // Validación pura: sin turnos duplicados/solapados en la misma fecha
+      const sameDay = await listShiftsInRange(form.date, form.date);
+      const conflict = findDayConflict({
+        shifts: sameDay,
+        date: form.date,
+        startTime: form.startTime,
+        endTime: form.endTime,
+      });
+      if (conflict) {
+        setStatus({ type: 'error', message: conflict.message });
+        return;
+      }
+
       await saveShift(form);
       setStatus({ type: 'ok', message: `Turno registrado: ${formatHours(duration)}.` });
       setForm((f) => ({ ...f, startTime: '', endTime: '' }));
@@ -152,7 +166,10 @@ export default function Dashboard({ onOpenSettings }) {
                   <button
                     type="button"
                     className="btn btn-outline-secondary rounded-pill px-4 py-2"
-                    onClick={() => setForm({ date: todayISO(), startTime: '', endTime: '' })}
+                    onClick={() => {
+                      setForm({ date: todayISO(), startTime: '', endTime: '' });
+                      setStatus(null);
+                    }}
                   >
                     Limpiar
                   </button>
@@ -212,6 +229,10 @@ export default function Dashboard({ onOpenSettings }) {
                   <div className="ha-skeleton" style={{ height: 96 }} />
                 ) : (
                   <dl className="row mb-0 small">
+                    <dt className="col-6 text-secondary fw-normal">Salario mensual</dt>
+                    <dd className="col-6 text-end fw-semibold tabular mb-2">
+                      {settings.monthlySalary > 0 ? formatCOP(settings.monthlySalary) : '—'}
+                    </dd>
                     <dt className="col-6 text-secondary fw-normal">Valor hora</dt>
                     <dd className="col-6 text-end fw-semibold tabular mb-2">
                       {formatCOP(settings.hourlyRate)}
@@ -223,6 +244,10 @@ export default function Dashboard({ onOpenSettings }) {
                     <dt className="col-6 text-secondary fw-normal">Descanso</dt>
                     <dd className="col-6 text-end fw-semibold mb-2">
                       {settings.breakMinutes > 0 ? `${settings.breakMinutes} min/día` : '—'}
+                    </dd>
+                    <dt className="col-6 text-secondary fw-normal">Auxilio</dt>
+                    <dd className="col-6 text-end fw-semibold mb-2">
+                      {getTransportMode(settings.transportMode).short}
                     </dd>
                     <dt className="col-6 text-secondary fw-normal">Contrato</dt>
                     <dd className="col-6 text-end fw-semibold mb-0">{contract.label}</dd>
