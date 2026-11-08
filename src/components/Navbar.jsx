@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 const LINKS = [
   { href: '#/', label: 'Dashboard', icon: 'bi-speedometer2', route: '/' },
   { href: '#/historial', label: 'Historial', icon: 'bi-clock-history', route: '/historial' },
+  { href: '#/nomina', label: 'Nómina', icon: 'bi-calculator', route: '/nomina' },
 ];
 
 export default function Navbar({ route, user, guest, onSettings }) {
@@ -58,8 +59,8 @@ export default function Navbar({ route, user, guest, onSettings }) {
                   onSettings();
                 }}
               >
-                <i className="bi bi-gear" />
-                Ajustes
+                <i className="bi bi-person-badge" />
+                Datos laborales
               </button>
             </li>
             <li className="nav-item ms-md-2 mt-3 mt-md-0">

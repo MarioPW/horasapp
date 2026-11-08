@@ -193,6 +193,14 @@ h6,
   white-space: nowrap;
 }
 
+/* Datos laborales dentro del resumen (bajo el periodo) */
+.ha-userinfo {
+  color: var(--ha-muted);
+}
+.ha-userinfo .fw-semibold {
+  color: var(--ha-ink);
+}
+
 /* ── Navbar ──────────────────────────────────────────── */
 .ha-navbar {
   background: rgba(255, 255, 255, 0.82);
@@ -318,6 +326,14 @@ h6,
 }
 
 /* ── Tabla de turnos ─────────────────────────────────── */
+/* Filtro por mes: compacto para la barra de encabezado */
+.ha-filter {
+  width: auto;
+  min-width: 9rem;
+  max-width: 12rem;
+  font-size: 0.8rem;
+}
+
 .ha-shift-table td,
 .ha-shift-table th {
   white-space: nowrap;

@@ -116,8 +116,9 @@ export function totalHours(shifts = []) {
  *
  * Reglas: 8 h/día ordinarias; excedente = horas extras progresivas (2 h al recargo
  * base, resto al mayor); noche +35%; domingo/festivo +25% diurno / +75% nocturno;
- * salud/pensión según configuración del usuario con tope de 25 SMLMV;
- * prestaciones solo en contratos laborales.
+ * descanso no pagado (breakMinutes) descontado de cada jornada antes de clasificar
+ * ordinarias/extras; salud/pensión según configuración del usuario con tope de 25
+ * SMLMV; prestaciones solo en contratos laborales.
  */
 export function calculateRangePayroll({ shifts = [], settings = {}, from = null, to = null } = {}) {
   const s = { ...DEFAULT_SETTINGS, ...settings };
@@ -125,6 +126,8 @@ export function calculateRangePayroll({ shifts = [], settings = {}, from = null,
   const rate = num(s.hourlyRate);
   const health = pct(s.healthRate);
   const pension = pct(s.pensionRate);
+  // Descanso diario no pagado: 0 o vacío → sin descuento
+  const breakPerDay = num(s.breakMinutes) / 60;
 
   const inRange = shifts.filter((sh) => (!from || sh.date >= from) && (!to || sh.date <= to));
   const days = aggregateShifts(inRange);
@@ -141,16 +144,25 @@ export function calculateRangePayroll({ shifts = [], settings = {}, from = null,
     overtime: 0,
   };
 
+  let breakDeducted = 0; // horas de descanso realmente descontadas en el rango
+
   for (const day of days) {
-    const total = day.total;
+    // Descuento de descanso por jornada (proporcional día/noche), tope = horas del día
+    const cut = Math.min(breakPerDay, day.total);
+    const total = day.total - cut;
+    const ratio = day.total > 0 ? total / day.total : 0;
+    const diurnal = day.diurnal * ratio;
+    const nocturnal = day.nocturnal * ratio;
+    breakDeducted += cut;
+
     const ordinary = Math.min(total, DAILY_ORDINARY_LIMIT);
     const overtime = Math.max(0, total - DAILY_ORDINARY_LIMIT);
     const ordRatio = total > 0 ? ordinary / total : 0;
     const otRatio = 1 - ordRatio;
-    const ordD = day.diurnal * ordRatio;
-    const ordN = day.nocturnal * ordRatio;
-    const otD = day.diurnal * otRatio;
-    const otN = day.nocturnal * otRatio;
+    const ordD = diurnal * ordRatio;
+    const ordN = nocturnal * ordRatio;
+    const otD = diurnal * otRatio;
+    const otN = nocturnal * otRatio;
 
     if (day.isSunday || day.isHoliday) {
       acc.sunD += ordD;
@@ -227,6 +239,7 @@ export function calculateRangePayroll({ shifts = [], settings = {}, from = null,
     },
   };
   hours.total = r2(hours.ordinary + hours.overtime + hours.sundayHoliday);
+  hours.break = r2(breakDeducted); // horas descontadas por descanso (informativo)
 
   const net = r2(earnings.total - deductions.total);
 
@@ -247,6 +260,12 @@ export function calculateRangePayroll({ shifts = [], settings = {}, from = null,
       shiftCount: inRange.filter((sh) => computeShiftDuration(sh) > 0).length,
       daysWorked: days.length,
       contractType: contract.value,
+      // Datos laborales usados en este cálculo (snapshot para mostrar en el resumen)
+      hourlyRate: rate,
+      healthRate: num(s.healthRate),
+      pensionRate: num(s.pensionRate),
+      breakMinutes: num(s.breakMinutes),
+      breakHoursDeducted: r2(breakDeducted),
     },
   };
 }

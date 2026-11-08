@@ -44,4 +44,5 @@ export const DEFAULT_SETTINGS = {
   healthRate: 4,
   pensionRate: 4,
   contractType: 'horas',
+  breakMinutes: 0, // descanso no pagado por jornada (0 = sin descuento)
 };

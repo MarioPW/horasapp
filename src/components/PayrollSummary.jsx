@@ -1,4 +1,5 @@
 import { formatCOP, formatHours, formatNumber } from '../utils/format.js';
+import { getContract } from '../utils/constants.js';
 
 const EARNINGS = [
   ['ordinaryDiurnal', 'Ordinarias diurnas'],
@@ -103,10 +104,41 @@ export default function PayrollSummary({ result }) {
           </div>
 
           {meta && (
-            <p className="small text-secondary mb-3">
-              <i className="bi bi-calendar2-range me-1" />
-              {meta.from} → {meta.to} · {meta.shiftCount} turnos · {meta.daysWorked} días laborados
-            </p>
+            <>
+              <p className="small text-secondary mb-0">
+                <i className="bi bi-calendar2-range me-1" />
+                {meta.from} → {meta.to} · {meta.shiftCount} turnos · {meta.daysWorked} días laborados
+              </p>
+
+              {/* Datos laborales del cálculo, justo debajo del periodo */}
+              <div className="ha-userinfo d-flex flex-wrap gap-2 gap-sm-3 small mt-2 pt-2 mb-3 border-top">
+                <span className="text-nowrap">
+                  <i className="bi bi-hourglass-split me-1 text-indigo" />
+                  Valor hora <span className="fw-semibold tabular">{formatCOP(meta.hourlyRate)}</span>
+                </span>
+                <span className="text-nowrap">
+                  <i className="bi bi-heart-pulse me-1 text-indigo" />
+                  Salud <span className="fw-semibold">{meta.healthRate}%</span>
+                </span>
+                <span className="text-nowrap">
+                  <i className="bi bi-shield-check me-1 text-indigo" />
+                  Pensión <span className="fw-semibold">{meta.pensionRate}%</span>
+                </span>
+                <span className="text-nowrap">
+                  <i className="bi bi-file-earmark-text me-1 text-indigo" />
+                  <span className="fw-semibold">{getContract(meta.contractType).label}</span>
+                </span>
+                {meta.breakMinutes > 0 && (
+                  <span className="text-nowrap">
+                    <i className="bi bi-cup-hot me-1 text-indigo" />
+                    Descanso <span className="fw-semibold">{meta.breakMinutes} min/día</span>
+                    {meta.breakHoursDeducted > 0 && (
+                      <span className="text-secondary"> (−{formatHours(meta.breakHoursDeducted)})</span>
+                    )}
+                  </span>
+                )}
+              </div>
+            </>
           )}
 
           <div className="d-grid gap-4">
@@ -169,6 +201,7 @@ export default function PayrollSummary({ result }) {
           <p className="form-text small mt-3 mb-0">
             Horas: {formatNumber(hours.ordinary)} ordinarias · {formatNumber(hours.overtime)}{' '}
             extras · {formatNumber(hours.sundayHoliday)} dominicales/festivas.
+            {hours.break > 0 && <> · Descuento de descanso: −{formatHours(hours.break)}</>}
           </p>
         </div>
       </div>

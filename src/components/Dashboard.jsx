@@ -198,7 +198,10 @@ export default function Dashboard({ onOpenSettings }) {
             <section className="card ha-card rise">
               <div className="card-body p-4">
                 <div className="d-flex align-items-center justify-content-between mb-3">
-                  <h2 className="h6 fw-bold text-uppercase text-secondary mb-0">Tu configuración</h2>
+                  <h2 className="h6 fw-bold text-uppercase text-secondary mb-0">
+                    <i className="bi bi-person-badge me-2 text-indigo" />
+                    Datos laborales
+                  </h2>
                   <button type="button" className="btn btn-sm btn-outline-indigo rounded-pill px-3" onClick={onOpenSettings}>
                     <i className="bi bi-pencil me-1" />
                     Editar
@@ -217,6 +220,10 @@ export default function Dashboard({ onOpenSettings }) {
                     <dd className="col-6 text-end fw-semibold mb-2">
                       {settings.healthRate}% / {settings.pensionRate}%
                     </dd>
+                    <dt className="col-6 text-secondary fw-normal">Descanso</dt>
+                    <dd className="col-6 text-end fw-semibold mb-2">
+                      {settings.breakMinutes > 0 ? `${settings.breakMinutes} min/día` : '—'}
+                    </dd>
                     <dt className="col-6 text-secondary fw-normal">Contrato</dt>
                     <dd className="col-6 text-end fw-semibold mb-0">{contract.label}</dd>
                   </dl>
@@ -228,8 +235,8 @@ export default function Dashboard({ onOpenSettings }) {
               <div className="card-body p-4 d-flex gap-3 align-items-start">
                 <i className="bi bi-lightbulb fs-4 text-indigo" />
                 <p className="small text-secondary mb-0">
-                  Después de registrar tus turnos, ve a <strong>Historial</strong> y pulsa{' '}
-                  <strong>Calcular Nómina</strong> para ver el desglose de un periodo.
+                  Desde el menú puedes ir a <strong>Historial</strong> para editar o eliminar
+                  turnos, o a <strong>Nómina</strong> para ver el resumen de un periodo.
                 </p>
               </div>
             </div>

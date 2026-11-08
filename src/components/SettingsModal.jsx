@@ -9,6 +9,7 @@ const empty = (s) => ({
   healthRate: String(s.healthRate ?? ''),
   pensionRate: String(s.pensionRate ?? ''),
   contractType: s.contractType ?? 'horas',
+  breakMinutes: String(s.breakMinutes ?? ''),
 });
 
 export default function SettingsModal({ show, onClose }) {
@@ -48,10 +49,15 @@ export default function SettingsModal({ show, onClose }) {
     const hourlyRate = Number(form.hourlyRate);
     const healthRate = Number(form.healthRate);
     const pensionRate = Number(form.pensionRate);
+    const breakRaw = String(form.breakMinutes ?? '').trim();
+    const breakMinutes = breakRaw === '' ? 0 : Number(breakRaw);
 
     if (!(hourlyRate > 0)) return setError('El valor de la hora debe ser mayor a 0.');
     if (!(healthRate >= 0 && healthRate <= 100) || !(pensionRate >= 0 && pensionRate <= 100)) {
       return setError('Los porcentajes deben estar entre 0 y 100.');
+    }
+    if (!Number.isFinite(breakMinutes) || breakMinutes < 0 || breakMinutes > 600) {
+      return setError('Los minutos de descanso deben estar entre 0 y 600.');
     }
 
     setSaving(true);
@@ -62,6 +68,7 @@ export default function SettingsModal({ show, onClose }) {
         healthRate,
         pensionRate,
         contractType: form.contractType,
+        breakMinutes: Math.round(breakMinutes),
       });
       setSaved(true);
     } catch (err) {
@@ -74,7 +81,16 @@ export default function SettingsModal({ show, onClose }) {
   const contract = getContract(form.contractType);
 
   return (
-    <Modal show={show} onClose={onClose} title="Ajustes de cuenta">
+    <Modal
+      show={show}
+      onClose={onClose}
+      title={
+        <>
+          <i className="bi bi-person-badge me-1 text-indigo" />
+          Datos laborales
+        </>
+      }
+    >
       <p className="small text-secondary mb-4">
         Configura tu base una vez: se usará en cada cálculo de nómina.
       </p>
@@ -92,7 +108,7 @@ export default function SettingsModal({ show, onClose }) {
       {saved && (
         <div className="alert alert-success py-2 small" role="status">
           <i className="bi bi-check-circle me-1" />
-          Configuración guardada.
+          Datos guardados.
         </div>
       )}
 
@@ -159,6 +175,29 @@ export default function SettingsModal({ show, onClose }) {
             {contract.benefits
               ? 'Contrato laboral: aplica auxilio de transporte y prestaciones sociales.'
               : 'Prestación de servicios: cotizaciones auto-liquidadas y sin prestaciones sociales.'}
+          </div>
+        </div>
+
+        <div className="mb-2">
+          <label className="form-label small fw-semibold" htmlFor="set-break">
+            Minutos de descanso{' '}
+            <span className="text-secondary fw-normal">(opcional)</span>
+          </label>
+          <div className="input-group">
+            <input
+              id="set-break"
+              type="text"
+              inputMode="numeric"
+              className="form-control"
+              value={form.breakMinutes}
+              onInput={set('breakMinutes')}
+              placeholder="0"
+            />
+            <span className="input-group-text">min/día</span>
+          </div>
+          <div className="form-text small">
+            Descanso no pagado por jornada: se descuenta de las horas de cada turno. Vacío o 0 = sin
+            descuento.
           </div>
         </div>
 
