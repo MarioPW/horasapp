@@ -12,6 +12,7 @@ import {
   TRANSPORT_RATE,
   TRANSPORT_THRESHOLD_SMMLV,
   DAILY_ORDINARY_LIMIT,
+  HOURS_PER_MONTH,
   DEFAULT_SETTINGS,
   getContract,
 } from './constants.js';
@@ -34,6 +35,17 @@ const pct = (v) => {
 const r2 = (v) => Math.round(v * 100) / 100;
 
 const overlap = (a1, a2, b1, b2) => Math.max(0, Math.min(a2, b2) - Math.max(a1, b1));
+
+/**
+ * Valor de hora efectivo: si hay salario básico mensual configurado se deriva
+ * con el divisor legal (210 h/mes, jornada 42 h/semana); si no, se usa el
+ * valor de hora directo.
+ */
+export function resolveHourlyRate(settings = {}) {
+  const monthly = num(settings.monthlySalary);
+  if (monthly > 0) return Math.round(monthly / HOURS_PER_MONTH);
+  return num(settings.hourlyRate);
+}
 
 /** 'HH:MM' → horas decimales. */
 export function timeToHours(time) {
@@ -117,13 +129,16 @@ export function totalHours(shifts = []) {
  * Reglas: 8 h/día ordinarias; excedente = horas extras progresivas (2 h al recargo
  * base, resto al mayor); noche +35%; domingo/festivo +25% diurno / +75% nocturno;
  * descanso no pagado (breakMinutes) descontado de cada jornada antes de clasificar
- * ordinarias/extras; salud/pensión según configuración del usuario con tope de 25
- * SMLMV; prestaciones solo en contratos laborales.
+ * ordinarias/extras; valor de hora derivado del salario mensual (÷210 h/mes) o
+ * directo; auxilio de transporte por modo de usuario (proporcional por
+ * defecto: (mensual/30) × días trabajados, fijo mensual, o ninguno); salud/pensión
+ * según configuración del usuario con tope de 25 SMLMV; prestaciones solo en
+ * contratos laborales.
  */
 export function calculateRangePayroll({ shifts = [], settings = {}, from = null, to = null } = {}) {
   const s = { ...DEFAULT_SETTINGS, ...settings };
   const contract = getContract(s.contractType);
-  const rate = num(s.hourlyRate);
+  const rate = resolveHourlyRate(s); // salario mensual (÷210) o valor de hora directo
   const health = pct(s.healthRate);
   const pension = pct(s.pensionRate);
   // Descanso diario no pagado: 0 o vacío → sin descuento
@@ -203,9 +218,18 @@ export function calculateRangePayroll({ shifts = [], settings = {}, from = null,
     earnings.sundayHolidayDiurnal +
     earnings.sundayHolidayNocturnal;
 
-  // Auxilio de transporte: solo contratos laborales con ingreso ≤ 2 SMLMV
-  if (contract.benefits && grossExcludingTransport <= TRANSPORT_THRESHOLD_SMMLV * SMLMV) {
-    earnings.transportAllowance = r2(TRANSPORT_RATE * SMLMV);
+  // Auxilio de transporte: solo contratos laborales con ingreso ≤ 2 SMLMV.
+  // Modo del usuario: proporcional (por defecto) = (mensual / 30) × días trabajados;
+  // fijo = valor mensual completo; ninguno = sin auxilio.
+  const transportMode = s.transportMode ?? 'proporcional';
+  if (
+    contract.benefits &&
+    transportMode !== 'ninguno' &&
+    grossExcludingTransport <= TRANSPORT_THRESHOLD_SMMLV * SMLMV
+  ) {
+    const monthly = TRANSPORT_RATE * SMLMV;
+    earnings.transportAllowance =
+      transportMode === 'fijo' ? r2(monthly) : r2((monthly / 30) * days.length);
   }
   earnings.total = r2(grossExcludingTransport + earnings.transportAllowance);
 
@@ -262,10 +286,13 @@ export function calculateRangePayroll({ shifts = [], settings = {}, from = null,
       contractType: contract.value,
       // Datos laborales usados en este cálculo (snapshot para mostrar en el resumen)
       hourlyRate: rate,
+      monthlySalary: num(s.monthlySalary),
       healthRate: num(s.healthRate),
       pensionRate: num(s.pensionRate),
       breakMinutes: num(s.breakMinutes),
       breakHoursDeducted: r2(breakDeducted),
+      transportMode,
+      transportDays: days.length,
     },
   };
 }

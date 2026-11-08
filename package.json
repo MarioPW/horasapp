@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "vite build && firebase deploy --only hosting",
-    "deploy:preview": "vite build && firebase hosting:channel:preview"
+    "deploy:preview": "vite build && firebase hosting:channel:preview",
+    "seed": "node scripts/seed.mjs"
   },
   "dependencies": {
     "bootstrap": "^5.3.8",

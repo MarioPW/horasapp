@@ -23,13 +23,21 @@ const BENEFITS = [
   ['vacation', 'Vacaciones (4.17%)'],
 ];
 
-function Rows({ items, source, hours, accent = false }) {
+function Rows({ items, source, hours, accent = false, meta }) {
   return items
     .filter(([key]) => source[key] !== 0)
     .map(([key, label]) => (
       <tr key={key}>
         <td className="text-secondary">
           {label}
+          {key === 'transportAllowance' &&
+            (meta?.transportMode === 'proporcional' || meta?.transportMode === 'fijo') && (
+              <span className="ha-hours ms-1">
+                {meta.transportMode === 'proporcional'
+                  ? `(${meta.transportDays} días)`
+                  : '(fijo mensual)'}
+              </span>
+            )}
           {hours?.[key] > 0 && (
             <span className="ha-hours ms-1">({formatHours(hours[key])})</span>
           )}
@@ -112,6 +120,13 @@ export default function PayrollSummary({ result }) {
 
               {/* Datos laborales del cálculo, justo debajo del periodo */}
               <div className="ha-userinfo d-flex flex-wrap gap-2 gap-sm-3 small mt-2 pt-2 mb-3 border-top">
+                {meta.monthlySalary > 0 && (
+                  <span className="text-nowrap">
+                    <i className="bi bi-cash-coin me-1 text-indigo" />
+                    Salario mensual{' '}
+                    <span className="fw-semibold tabular">{formatCOP(meta.monthlySalary)}</span>
+                  </span>
+                )}
                 <span className="text-nowrap">
                   <i className="bi bi-hourglass-split me-1 text-indigo" />
                   Valor hora <span className="fw-semibold tabular">{formatCOP(meta.hourlyRate)}</span>
@@ -147,7 +162,7 @@ export default function PayrollSummary({ result }) {
               <div className="table-responsive">
                 <table className="table table-sm align-middle mb-0">
                   <tbody>
-                    <Rows items={EARNINGS} source={earnings} hours={hours.byCategory} />
+                    <Rows items={EARNINGS} source={earnings} hours={hours.byCategory} meta={meta} />
                     <tr className="table-light">
                       <td className="fw-bold">Total</td>
                       <td className="text-end fw-bold tabular">{formatCOP(earnings.total)}</td>

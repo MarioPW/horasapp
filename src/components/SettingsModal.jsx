@@ -2,14 +2,18 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import Modal from './Modal.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
-import { CONTRACT_TYPES, getContract } from '../utils/constants.js';
+import { CONTRACT_TYPES, getContract, TRANSPORT_MODES, getTransportMode, HOURS_PER_MONTH } from '../utils/constants.js';
 
 const empty = (s) => ({
   hourlyRate: String(s.hourlyRate ?? ''),
+  monthlySalary: s.monthlySalary > 0 ? String(s.monthlySalary) : '',
+  // Un solo campo: se escoje el modo con el dropdown (uno u otro, nunca ambos)
+  payMode: s.monthlySalary > 0 ? 'monthly' : 'hourly',
   healthRate: String(s.healthRate ?? ''),
   pensionRate: String(s.pensionRate ?? ''),
   contractType: s.contractType ?? 'horas',
   breakMinutes: String(s.breakMinutes ?? ''),
+  transportMode: s.transportMode ?? 'proporcional',
 });
 
 export default function SettingsModal({ show, onClose }) {
@@ -44,15 +48,34 @@ export default function SettingsModal({ show, onClose }) {
     }));
   };
 
+  // Dropdown + input único: escribe en el modo activo y conserva el otro valor
+  const setPayMode = (e) => setForm((f) => ({ ...f, payMode: e.currentTarget.value }));
+
+  const onPayInput = (e) => {
+    const raw = e.currentTarget.value;
+    setForm((f) => (f.payMode === 'monthly' ? { ...f, monthlySalary: raw } : { ...f, hourlyRate: raw }));
+  };
+
   const submit = async (e) => {
     e.preventDefault();
-    const hourlyRate = Number(form.hourlyRate);
+    // Un solo ingreso: el modo activo (dropdown) define si es salario mensual u hora directa
+    const isMonthly = form.payMode === 'monthly';
+    const raw = String(isMonthly ? form.monthlySalary : form.hourlyRate).trim();
+    const value = raw === '' ? 0 : Number(raw);
+    const monthlySalary = isMonthly ? Math.round(value) : 0;
+    const hourlyRate = isMonthly ? Math.round(value / HOURS_PER_MONTH) : Math.round(value);
     const healthRate = Number(form.healthRate);
     const pensionRate = Number(form.pensionRate);
     const breakRaw = String(form.breakMinutes ?? '').trim();
     const breakMinutes = breakRaw === '' ? 0 : Number(breakRaw);
 
-    if (!(hourlyRate > 0)) return setError('El valor de la hora debe ser mayor a 0.');
+    if (!(value > 0)) {
+      return setError(
+        isMonthly
+          ? 'El salario mensual debe ser mayor a 0.'
+          : 'El valor de la hora debe ser mayor a 0.',
+      );
+    }
     if (!(healthRate >= 0 && healthRate <= 100) || !(pensionRate >= 0 && pensionRate <= 100)) {
       return setError('Los porcentajes deben estar entre 0 y 100.');
     }
@@ -64,11 +87,15 @@ export default function SettingsModal({ show, onClose }) {
     setError('');
     try {
       await save({
-        hourlyRate: Math.round(hourlyRate),
+        hourlyRate,
+        monthlySalary,
         healthRate,
         pensionRate,
         contractType: form.contractType,
         breakMinutes: Math.round(breakMinutes),
+        transportMode: TRANSPORT_MODES.some((m) => m.value === form.transportMode)
+          ? form.transportMode
+          : 'proporcional',
       });
       setSaved(true);
     } catch (err) {
@@ -114,20 +141,49 @@ export default function SettingsModal({ show, onClose }) {
 
       <form onSubmit={submit} noValidate>
         <div className="mb-3">
-          <label className="form-label small fw-semibold" htmlFor="set-rate">
-            Valor base de la hora
+          <label className="form-label small fw-semibold" htmlFor="set-pay">
+            Salario o valor de hora
           </label>
+          {/* Input único + dropdown: solo uno de los dos modos a la vez */}
           <div className="input-group">
+            <span className="input-group-text p-0">
+              <select
+                className="form-select ha-mode-select"
+                value={form.payMode}
+                onChange={setPayMode}
+                aria-label="Modo de ingreso"
+              >
+                <option value="monthly">Salario mensual</option>
+                <option value="hourly">Valor hora</option>
+              </select>
+            </span>
             <span className="input-group-text">$</span>
             <input
-              id="set-rate"
+              id="set-pay"
               type="text"
-              inputMode="decimal"
-              className="form-control"
-              value={form.hourlyRate}
-              onInput={set('hourlyRate')}
+              inputMode="numeric"
+              className="form-control tabular"
+              value={form.payMode === 'monthly' ? form.monthlySalary : form.hourlyRate}
+              onInput={onPayInput}
+              placeholder="0"
             />
-            <span className="input-group-text">/hora</span>
+            <span className="input-group-text">
+              {form.payMode === 'monthly' ? '/mes' : '/hora'}
+            </span>
+          </div>
+          <div className="form-text small">
+            {form.payMode === 'monthly' ? (
+              <>
+                <i className="bi bi-calculator me-1" />
+                El valor de la hora se deriva con el divisor legal (÷ {HOURS_PER_MONTH} h/mes,
+                jornada de 42 h/semana).
+              </>
+            ) : (
+              <>
+                <i className="bi bi-clock me-1" />
+                Valor fijo por hora, sin salario mensual.
+              </>
+            )}
           </div>
         </div>
 
@@ -175,6 +231,31 @@ export default function SettingsModal({ show, onClose }) {
             {contract.benefits
               ? 'Contrato laboral: aplica auxilio de transporte y prestaciones sociales.'
               : 'Prestación de servicios: cotizaciones auto-liquidadas y sin prestaciones sociales.'}
+          </div>
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label small fw-semibold" htmlFor="set-transport">
+            Auxilio de transporte
+          </label>
+          <select
+            id="set-transport"
+            className="form-select"
+            value={form.transportMode}
+            onChange={set('transportMode')}
+          >
+            {TRANSPORT_MODES.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+          <div className="form-text small">
+            {getTransportMode(form.transportMode).value === 'proporcional'
+              ? 'Se calcula (valor mensual / 30) × días trabajados en el corte.'
+              : getTransportMode(form.transportMode).value === 'fijo'
+                ? 'Entrega el valor mensual completo sin importar los días del corte.'
+                : 'Sin auxilio: para trabajo remoto o ingreso superior a 2 SMLMV.'}
           </div>
         </div>
 

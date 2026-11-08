@@ -6,10 +6,13 @@ App de seguimiento de turnos y nómina estimada para trabajadores por horas en C
 ## Flujo
 
 1. **Dashboard** → registra turnos día a día (fecha, entrada, salida; cruce de medianoche soportado).
-2. **Datos laborales** → configura una vez valor de la hora, % salud, % pensión y tipo de contrato (Firestore `users/{uid}`).
+2. **Datos laborales** → define el **salario básico mensual** (la hora se deriva ÷ 210 h/mes) o el
+   valor de la hora directo, % salud, % pensión, tipo de contrato, modo de auxilio de transporte y
+   descanso por jornada (Firestore `users/{uid}` con `monthlySalary`).
 3. **Historial** → lista los turnos con filtro por mes y acciones de editar/eliminar.
-4. **Nómina** → selecciona el corte (desde/hasta) y pulsa **Calcular Nómina**: se traen los turnos
-   del rango y se aplica la legislación colombiana con tu configuración.
+4. **Nómina** → selecciona el corte (desde/hasta), revisa la lista de turnos del periodo y pulsa
+   **Calcular Nómina**: la lista se colapsa y se aplica la legislación colombiana con tu
+   configuración (cambiar fechas o "Ver turnos" regresa a la lista).
 
 ## Estructura
 

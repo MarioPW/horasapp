@@ -452,6 +452,24 @@ h6,
   }
 }
 
+/* ── Dropdown de modo de ingreso (Datos laborales) ──── */
+.ha-mode-select {
+  width: auto;
+  border: 0;
+  background-color: transparent;
+  background-image: none;
+  color: var(--ha-indigo);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 0.5rem;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.ha-mode-select:focus {
+  box-shadow: none;
+}
+
 /* ── Ajustes móviles ─────────────────────────────────── */
 @media (max-width: 575.98px) {
   .table > :not(caption) > * > * {
