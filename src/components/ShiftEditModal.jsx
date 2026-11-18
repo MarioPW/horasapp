@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import Modal from './Modal.jsx';
-import { todayISO } from '../utils/dates.js';
+import { todayISO, addDaysISO } from '../utils/dates.js';
 import { listShiftsInRange } from '../services/shifts.js';
-import { findDayConflict } from '../utils/shiftConflicts.js';
+import { findOverlapConflict } from '../utils/shiftConflicts.js';
 
 export default function ShiftEditModal({ shift, onClose, onSave }) {
   const [form, setForm] = useState({ date: '', startTime: '', endTime: '' });
@@ -20,40 +20,51 @@ export default function ShiftEditModal({ shift, onClose, onSave }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.date || !form.startTime || !form.endTime) {
-      return setError('Completa fecha, entrada y salida.');
-    }
-    if (form.startTime === form.endTime) return setError('Las horas deben ser distintas.');
+    if (!form.date || !form.startTime) return setError('Completa la fecha y la hora de entrada.');
+    // Sin salida → sigue "Pendiente"; con salida se valida el solape
+    const closing = Boolean(form.endTime);
+    if (closing && form.startTime === form.endTime) return setError('Las horas deben ser distintas.');
 
     setSaving(true);
     setError('');
     try {
-      // Ignora el turno en edición (excludeId) para no auto-colisionar
-      const sameDay = await listShiftsInRange(form.date, form.date);
-      const conflict = findDayConflict({
-        shifts: sameDay,
-        date: form.date,
-        startTime: form.startTime,
-        endTime: form.endTime,
-        excludeId: shift?.id,
-      });
-      if (conflict) {
-        setError(conflict.message);
-        setSaving(false);
-        return;
+      if (closing) {
+        // Vecinos ±1 día: la salida puede cruzar medianoche hacia un turno posterior
+        const nearby = await listShiftsInRange(addDaysISO(form.date, -1), addDaysISO(form.date, 1));
+        const conflict = findOverlapConflict({
+          shifts: nearby,
+          date: form.date,
+          startTime: form.startTime,
+          endTime: form.endTime,
+          excludeId: shift?.id,
+        });
+        if (conflict) {
+          setError(conflict.message);
+          setSaving(false);
+          return;
+        }
       }
-      await onSave(form);
+      await onSave({ ...form, endTime: closing ? form.endTime : null });
     } catch (err) {
       setError(err.message);
       setSaving(false);
     }
   };
 
+  const pending = shift && !shift.endTime;
+
   return (
-    <Modal show={Boolean(shift)} onClose={onClose} title="Editar turno">
+    <Modal show={Boolean(shift)} onClose={onClose} title={pending ? 'Registrar salida' : 'Editar turno'}>
       {error && (
         <div className="alert alert-danger py-2 small" role="alert">
+          <i className="bi bi-exclamation-circle me-1" />
           {error}
+        </div>
+      )}
+      {pending && !error && (
+        <div className="alert alert-warning py-2 small" role="status">
+          <i className="bi bi-clock-history me-1" />
+          Turno pendiente: registra la hora de salida para cerrarlo.
         </div>
       )}
       <form onSubmit={submit} noValidate>
@@ -94,6 +105,10 @@ export default function ShiftEditModal({ shift, onClose, onSave }) {
               value={form.endTime}
               onInput={set('endTime')}
             />
+            <div className="form-text small mt-1">
+              Vacío = sigue como pendiente. Si sale después de medianoche, usa la hora del día
+              siguiente.
+            </div>
           </div>
         </div>
         <div className="d-flex gap-2">

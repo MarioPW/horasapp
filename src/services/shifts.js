@@ -22,13 +22,18 @@ function session() {
 
 const byDateDesc = (a, b) => String(b.date).localeCompare(String(a.date));
 
+/** Salida vacía → null ("Pendiente"); Firestore guarda `endTime: null`. */
+const toDoc = ({ date, startTime, endTime }) => ({
+  date,
+  startTime,
+  endTime: endTime || null,
+});
+
 export async function saveShift({ date, startTime, endTime }) {
   const { uid } = session();
   const ref = await addDoc(collection(firestore(), COLLECTION), {
     uid,
-    date,
-    startTime,
-    endTime,
+    ...toDoc({ date, startTime, endTime }),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -38,9 +43,7 @@ export async function saveShift({ date, startTime, endTime }) {
 export async function updateShift(id, { date, startTime, endTime }) {
   session();
   await updateDoc(doc(firestore(), COLLECTION, id), {
-    date,
-    startTime,
-    endTime,
+    ...toDoc({ date, startTime, endTime }),
     updatedAt: serverTimestamp(),
   });
   return id;
@@ -55,6 +58,7 @@ export async function deleteShift(id) {
 /**
  * Todos los turnos del usuario autenticado (ordenados en cliente para
  * evitar índices compuestos en Firestore).
+ * @returns {Promise<Array<{ id: string } & Record<string, any>>>}
  */
 export async function listShifts() {
   const { uid } = session();

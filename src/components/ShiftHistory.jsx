@@ -174,10 +174,17 @@ export default function ShiftHistory() {
                           )}
                         </td>
                         <td className="ha-col-time tabular">
-                          {s.startTime} <span className="text-indigo">→</span> {s.endTime}
+                          {s.startTime} <span className="text-indigo">→</span>{' '}
+                          {s.endTime ? (
+                            s.endTime
+                          ) : (
+                            <span className="badge text-bg-warning" title="Sin hora de salida">
+                              Pendiente
+                            </span>
+                          )}
                         </td>
                         <td className="ha-col-hours text-end fw-semibold tabular">
-                          {formatHours(hours)}
+                          {s.endTime ? formatHours(hours) : '—'}
                         </td>
                         <td className="ha-col-actions text-end text-nowrap">
                           {pendingDelete === s.id ? (
@@ -207,10 +214,12 @@ export default function ShiftHistory() {
                               <button
                                 type="button"
                                 className="btn btn-sm btn-outline-secondary ha-icon-btn me-1"
-                                aria-label="Editar turno"
+                                aria-label={
+                                  s.endTime ? 'Editar turno' : 'Registrar salida del turno pendiente'
+                                }
                                 onClick={() => setEditing(s)}
                               >
-                                <i className="bi bi-pencil" />
+                                <i className={`bi ${s.endTime ? 'bi-pencil' : 'bi-door-open'}`} />
                               </button>
                               <button
                                 type="button"

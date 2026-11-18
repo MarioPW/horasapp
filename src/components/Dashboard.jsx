@@ -10,7 +10,7 @@ import { getContract, getTransportMode } from '../utils/constants.js';
 
 export default function Dashboard({ onOpenSettings }) {
   const { configured } = useAuth();
-  const { settings, loading } = useSettings();
+  const { settings, loading: settingsLoading } = useSettings();
   const [form, setForm] = useState({ date: todayISO(), startTime: '', endTime: '' });
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -34,34 +34,46 @@ export default function Dashboard({ onOpenSettings }) {
     e.preventDefault();
     setStatus(null);
 
-    if (!form.date || !form.startTime || !form.endTime) {
-      return setStatus({ type: 'error', message: 'Completa fecha, entrada y salida.' });
+    if (!form.date || !form.startTime) {
+      return setStatus({ type: 'error', message: 'Completa la fecha y la hora de entrada.' });
     }
-    if (form.startTime === form.endTime) {
-      return setStatus({ type: 'error', message: 'La hora de salida debe ser distinta a la de entrada.' });
-    }
-    const duration = computeShiftDuration(form);
-    if (duration <= 0) {
-      return setStatus({ type: 'error', message: 'Horario inválido.' });
+    // Sin salida → turno "Pendiente": no bloquea registros posteriores
+    const isPending = !form.endTime;
+    let duration = 0;
+    if (!isPending) {
+      if (form.startTime === form.endTime) {
+        return setStatus({ type: 'error', message: 'La hora de salida debe ser distinta a la de entrada.' });
+      }
+      duration = computeShiftDuration(form);
+      if (duration <= 0) {
+        return setStatus({ type: 'error', message: 'Horario inválido.' });
+      }
     }
 
     setSaving(true);
     try {
-      // Validación pura: sin turnos duplicados/solapados en la misma fecha
-      const sameDay = await listShiftsInRange(form.date, form.date);
-      const conflict = findDayConflict({
-        shifts: sameDay,
-        date: form.date,
-        startTime: form.startTime,
-        endTime: form.endTime,
-      });
-      if (conflict) {
-        setStatus({ type: 'error', message: conflict.message });
-        return;
+      // Solo los turnos cerrados se validan (los pendientes aún no tienen rango)
+      if (!isPending) {
+        const sameDay = await listShiftsInRange(form.date, form.date);
+        const conflict = findDayConflict({
+          shifts: sameDay,
+          date: form.date,
+          startTime: form.startTime,
+          endTime: form.endTime,
+        });
+        if (conflict) {
+          setStatus({ type: 'error', message: conflict.message });
+          return;
+        }
       }
 
-      await saveShift(form);
-      setStatus({ type: 'ok', message: `Turno registrado: ${formatHours(duration)}.` });
+      await saveShift({ ...form, endTime: isPending ? null : form.endTime });
+      setStatus({
+        type: 'ok',
+        message: isPending
+          ? 'Turno guardado como pendiente: registra la salida luego desde Historial.'
+          : `Turno registrado: ${formatHours(duration)}.`,
+      });
       setForm((f) => ({ ...f, startTime: '', endTime: '' }));
       refreshStats().catch(() => {});
     } catch (err) {
@@ -71,7 +83,7 @@ export default function Dashboard({ onOpenSettings }) {
     }
   };
 
-  const contract = getContract(settings.contractType);
+  const contract = getContract(settings?.contractType);
 
   return (
     <>
@@ -85,7 +97,7 @@ export default function Dashboard({ onOpenSettings }) {
 
       <div className="row g-4">
         <div className="col-12 col-lg-7">
-          <section className="card ha-card rise">
+          <section className="card ha-card ha-form-checkin rise">
             <div className="card-body p-4">
               <h2 className="h6 fw-bold text-uppercase text-secondary mb-3">
                 <i className="bi bi-calendar2-check me-2 text-indigo" />
@@ -146,7 +158,10 @@ export default function Dashboard({ onOpenSettings }) {
                       value={form.endTime}
                       onInput={set('endTime')}
                     />
-                    <div className="form-text small mt-1">Si sale después de medianoche, usa la hora del día siguiente.</div>
+                    <div className="form-text small mt-1">
+                      Si sale después de medianoche, usa la hora del día siguiente. Déjala vacía si
+                      aún no sales: el turno queda <strong>Pendiente</strong>.
+                    </div>
                   </div>
                 </div>
 
@@ -225,9 +240,9 @@ export default function Dashboard({ onOpenSettings }) {
                   </button>
                 </div>
 
-                {loading ? (
+                {settingsLoading ? (
                   <div className="ha-skeleton" style={{ height: 96 }} />
-                ) : (
+                ) : settings ? (
                   <dl className="row mb-0 small">
                     <dt className="col-6 text-secondary fw-normal">Salario mensual</dt>
                     <dd className="col-6 text-end fw-semibold tabular mb-2">
@@ -252,6 +267,10 @@ export default function Dashboard({ onOpenSettings }) {
                     <dt className="col-6 text-secondary fw-normal">Contrato</dt>
                     <dd className="col-6 text-end fw-semibold mb-0">{contract.label}</dd>
                   </dl>
+                ) : (
+                  <p className="small text-secondary mb-0">
+                    Sin datos laborales: completa tu información para ver tu base de cálculo.
+                  </p>
                 )}
               </div>
             </section>
