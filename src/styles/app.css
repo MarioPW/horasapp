@@ -81,6 +81,14 @@ h6,
   font-size: 0.8em;
 }
 
+/* Etiqueta "Fest." compacta: siempre visible y sin empujar la fecha en móvil */
+.ha-badge-fest {
+  font-size: 0.75em;
+  font-weight: 600;
+  padding: 0.2em 0.4em;
+  vertical-align: 0.05em;
+}
+
 .btn-brand {
   color: #fff;
   border: 0;
@@ -424,6 +432,12 @@ h6,
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* La etiqueta festiva se encoge para no ser recortada por elipsis */
+  .ha-shift-table .ha-badge-fest {
+    font-size: 0.7em;
+    padding: 0.14em 0.3em;
   }
 
   .ha-col-time {

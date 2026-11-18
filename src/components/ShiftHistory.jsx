@@ -168,9 +168,7 @@ export default function ShiftHistory() {
                             <span className="d-none d-lg-inline">{formatDayName(s.date)}</span>
                           </span>
                           {holiday && !sunday && (
-                            <span className="badge text-bg-info ms-1 d-none d-sm-inline">
-                              Fest.
-                            </span>
+                            <span className="badge text-bg-info ms-1 ha-badge-fest">Fest.</span>
                           )}
                         </td>
                         <td className="ha-col-time tabular">
