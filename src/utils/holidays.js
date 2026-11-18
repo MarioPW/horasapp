@@ -3,8 +3,8 @@ import { addDaysISO, parseISO } from './dates.js';
 /** Festivos fijos (no se trasladan). */
 const FIXED = ['01-01', '05-01', '07-20', '08-07', '12-08', '12-25'];
 
-/** Festivos trasladables al lunes siguiente (Ley 51/1990). */
-const MONDAY_MOVE = ['01-06', '03-19', '10-12', '11-01'];
+/** Festivos trasladables al lunes siguiente (Ley 51 de 1983, los 7 estatutarios). */
+const MONDAY_MOVE = ['01-06', '03-19', '06-29', '08-15', '10-12', '11-01', '11-11'];
 
 /** Domingo de Pascua (algoritmo de Meeus/Jones/Butcher, calendario gregoriano). */
 function easterSunday(year) {

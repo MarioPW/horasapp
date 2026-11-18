@@ -8,6 +8,7 @@ import {
   dailySpanHours,
 } from './payrollCalculator.js';
 import { findOverlapConflict } from './shiftConflicts.js';
+import { colombianHolidays, isColombianHoliday } from './holidays.js';
 import {
   SMLMV,
   DAILY_ORDINARY_LIMIT,
@@ -355,3 +356,27 @@ describe('cierre automático con la jornada diaria', () => {
   });
 });
 
+describe('festivos colombianos (Ley 51 de 1983)', () => {
+  it('colombianHolidays(2026) lista los 18 festivos oficiales', () => {
+    expect(colombianHolidays(2026).size).toBe(18);
+  });
+
+  it('móviles trasladados: Cartagena 16-nov, San Pedro y San Pablo 29-jun, Asunción 17-ago', () => {
+    expect(isColombianHoliday('2026-11-16')).toBe(true); // 11-nov (mié) → lunes 16-nov
+    expect(isColombianHoliday('2026-11-11')).toBe(false);
+    expect(isColombianHoliday('2026-06-29')).toBe(true); // ya cae lunes: no se traslada
+    expect(isColombianHoliday('2026-08-17')).toBe(true); // 15-ago (sáb) → lunes 17-ago
+    expect(isColombianHoliday('2026-08-15')).toBe(false);
+  });
+
+  it('un turno el lunes 16-nov-2026 se cobra con recargo festivo', () => {
+    const res = calculateRangePayroll({
+      shifts: [{ id: 'f1', date: '2026-11-16', startTime: '09:00', endTime: '17:00' }],
+      settings: base,
+      from: '2026-11-16',
+      to: '2026-11-16',
+    });
+    expect(res.hours.sundayHoliday).toBe(8);
+    expect(res.earnings.sundayHolidayDiurnal).toBe(152000); // 8 × 10.000 × 1,90
+  });
+});
