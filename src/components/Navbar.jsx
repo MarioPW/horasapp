@@ -7,7 +7,7 @@ const LINKS = [
   { href: '#/nomina', label: 'Nómina', icon: 'bi-calculator', route: '/nomina' },
 ];
 
-export default function Navbar({ route, user, guest, onSettings }) {
+export default function Navbar({ route, user, guest, onSettings, onGuide }) {
   const { logout } = useAuth();
   const [open, setOpen] = useState(false);
 
@@ -50,6 +50,20 @@ export default function Navbar({ route, user, guest, onSettings }) {
                 </a>
               </li>
             ))}
+            <li className="nav-item">
+              <button
+                type="button"
+                className="nav-link ha-nav-link d-flex align-items-center gap-2 border-0 bg-transparent"
+                aria-haspopup="dialog"
+                onClick={() => {
+                  goClose();
+                  onGuide();
+                }}
+              >
+                <i className="bi bi-journal-text" />
+                Cómo se calcula
+              </button>
+            </li>
             <li className="nav-item">
               <button
                 type="button"
