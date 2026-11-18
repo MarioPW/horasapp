@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /**
  * Firebase config skeleton (Auth + Firestore, modular SDK v9+).
  * Inyecta tus credenciales aquí o define las variables VITE_FIREBASE_* en .env.local.

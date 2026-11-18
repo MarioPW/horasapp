@@ -74,13 +74,12 @@ function spread(arr, n) {
 
 async function main() {
   // 1. Sesión (registra la cuenta si aún no existe)
-  let user;
   try {
-    user = await loginWithEmail(EMAIL, PASS);
+    await loginWithEmail(EMAIL, PASS);
     console.log(`✓ Sesión iniciada: ${EMAIL}`);
   } catch (e) {
     if (e.message.includes('No existe una cuenta')) {
-      user = await registerWithEmail('Mario Ariana', EMAIL, PASS);
+      await registerWithEmail('Mario Ariana', EMAIL, PASS);
       console.log(`✓ Cuenta creada: ${EMAIL}`);
     } else {
       throw e;

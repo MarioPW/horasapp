@@ -58,13 +58,3 @@ export const CONTRACT_TYPES = [
 
 export const getContract = (value) =>
   CONTRACT_TYPES.find((c) => c.value === value) ?? CONTRACT_TYPES[0];
-
-export const DEFAULT_SETTINGS = {
-  hourlyRate: 8000,
-  monthlySalary: 0, // salario básico mensual (0 = usar valor de hora directo)
-  healthRate: 4,
-  pensionRate: 4,
-  contractType: 'horas',
-  breakMinutes: 0, // descanso no pagado por jornada (0 = sin descuento)
-  transportMode: 'proporcional', // proporcional | fijo | ninguno
-};
