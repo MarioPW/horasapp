@@ -8,28 +8,28 @@ const EARNINGS = [
   ['overtimeNocturnal', 'Extras nocturnas'],
   ['sundayHolidayDiurnal', 'Dom./festivo diurno'],
   ['sundayHolidayNocturnal', 'Dom./festivo nocturno'],
+  ['sundayHolidayOvertimeDiurnal', 'Extras dom./fest. diurnas'],
+  ['sundayHolidayOvertimeNocturnal', 'Extras dom./fest. nocturnas'],
   ['transportAllowance', 'Auxilio de transporte'],
 ];
 
-const DEDUCTIONS = [
-  ['health', 'Salud (4%)'],
-  ['pension', 'Pensión (4%)'],
-];
-
 const BENEFITS = [
-  ['severance', 'Cesantías (8.33%)'],
-  ['severanceInterest', 'Intereses cesantías (1%)'],
-  ['prima', 'Prima (8.33%)'],
-  ['vacation', 'Vacaciones (4.17%)'],
+  ['severance', 'Cesantías (8.33%)', 'Base: devengados + auxilio de transporte.'],
+  ['severanceInterest', 'Intereses cesantías', '12% anual prorrateado por los días del periodo.'],
+  ['prima', 'Prima (8.33%)', 'Base: devengados + auxilio de transporte.'],
+  ['vacation', 'Vacaciones (4.17%)', 'Solo base ordinaria: sin extras ni recargos dominicales/festivos.'],
 ];
 
-function Rows({ items, source, hours, accent = false, meta }) {
+function Rows({ items, source, hours = null, meta = null, accent = false }) {
   return items
     .filter(([key]) => source[key] !== 0)
-    .map(([key, label]) => (
+    .map(([key, label, tip]) => (
       <tr key={key}>
         <td className="text-secondary">
           {label}
+          {tip && (
+            <i className="bi bi-info-circle ms-1 ha-tip" title={tip} aria-label={tip} />
+          )}
           {key === 'transportAllowance' &&
             (meta?.transportMode === 'proporcional' || meta?.transportMode === 'fijo') && (
               <span className="ha-hours ms-1">
@@ -63,7 +63,7 @@ function Stat({ label, value, icon, variant }) {
   );
 }
 
-export default function PayrollSummary({ result }) {
+export default function PayrollSummary({ result, onOpenGuide }) {
   const { earnings, deductions, benefits, hours, totals, meta } = result;
 
   return (
@@ -143,6 +143,13 @@ export default function PayrollSummary({ result }) {
                   <i className="bi bi-file-earmark-text me-1 text-indigo" />
                   <span className="fw-semibold">{getContract(meta.contractType).label}</span>
                 </span>
+                {meta.dailyOrdinaryLimit > 0 && (
+                  <span className="text-nowrap">
+                    <i className="bi bi-stopwatch me-1 text-indigo" />
+                    Límite diario{' '}
+                    <span className="fw-semibold tabular">{meta.dailyOrdinaryLimit} h</span>
+                  </span>
+                )}
                 {meta.breakMinutes > 0 && (
                   <span className="text-nowrap">
                     <i className="bi bi-cup-hot me-1 text-indigo" />
@@ -180,7 +187,14 @@ export default function PayrollSummary({ result }) {
               <div className="table-responsive">
                 <table className="table table-sm align-middle mb-0">
                   <tbody>
-                    <Rows items={DEDUCTIONS} source={deductions} accent />
+                    <Rows
+                  items={[
+                    ['health', `Salud (${meta.healthRate}%)`],
+                    ['pension', `Pensión (${meta.pensionRate}%)`],
+                  ]}
+                  source={deductions}
+                  accent
+                />
                     <tr className="table-light">
                       <td className="fw-bold">Total</td>
                       <td className="text-end fw-bold tabular text-danger">
@@ -215,9 +229,24 @@ export default function PayrollSummary({ result }) {
 
           <p className="form-text small mt-3 mb-0">
             Horas: {formatNumber(hours.ordinary)} ordinarias · {formatNumber(hours.overtime)}{' '}
-            extras · {formatNumber(hours.sundayHoliday)} dominicales/festivas.
+            extras · {formatNumber(hours.sundayHoliday)} dominicales/festivas
+            {hours.sundayHolidayOvertime > 0 && (
+              <> · {formatNumber(hours.sundayHolidayOvertime)} extras dom./fest.</>
+            )}
             {hours.break > 0 && <> · Descuento de descanso: −{formatHours(hours.break)}</>}
           </p>
+
+          {onOpenGuide && (
+            <button
+              type="button"
+              className="btn btn-sm btn-link ps-0 mt-2"
+              aria-haspopup="dialog"
+              onClick={onOpenGuide}
+            >
+              <i className="bi bi-journal-text me-1" />
+              ¿Cómo se calcula mi nómina?
+            </button>
+          )}
         </div>
       </div>
     </div>

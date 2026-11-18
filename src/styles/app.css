@@ -193,6 +193,13 @@ h6,
   white-space: nowrap;
 }
 
+/* Tooltip nativo en filas de prestaciones (base legal) */
+.ha-tip {
+  font-size: 0.85em;
+  color: #94a3b8;
+  cursor: help;
+}
+
 /* Datos laborales dentro del resumen (bajo el periodo) */
 .ha-userinfo {
   color: var(--ha-muted);

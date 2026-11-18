@@ -2,21 +2,26 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import Modal from './Modal.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
-import { CONTRACT_TYPES, getContract, TRANSPORT_MODES, getTransportMode, HOURS_PER_MONTH } from '../utils/constants.js';
+import { CONTRACT_TYPES, getContract, TRANSPORT_MODES, getTransportMode, HOURS_PER_MONTH, DAILY_ORDINARY_LIMIT } from '../utils/constants.js';
 
-const empty = (s) => ({
-  hourlyRate: String(s.hourlyRate ?? ''),
-  monthlySalary: s.monthlySalary > 0 ? String(s.monthlySalary) : '',
-  // Un solo campo: se escoje el modo con el dropdown (uno u otro, nunca ambos)
-  payMode: s.monthlySalary > 0 ? 'monthly' : 'hourly',
-  healthRate: String(s.healthRate ?? ''),
-  pensionRate: String(s.pensionRate ?? ''),
-  contractType: s.contractType ?? 'horas',
-  breakMinutes: String(s.breakMinutes ?? ''),
-  transportMode: s.transportMode ?? 'proporcional',
-});
+const empty = (s) => {
+  const v = s ?? {};
+  return {
+    hourlyRate: String(v.hourlyRate ?? ''),
+    monthlySalary: v.monthlySalary > 0 ? String(v.monthlySalary) : '',
+    // Un solo campo: se escoje el modo con el dropdown (uno u otro, nunca ambos)
+    payMode: v.monthlySalary > 0 ? 'monthly' : 'hourly',
+    healthRate: String(v.healthRate ?? ''),
+    pensionRate: String(v.pensionRate ?? ''),
+    contractType: v.contractType ?? CONTRACT_TYPES[0].value, // preselección del dropdown
+    breakMinutes: String(v.breakMinutes ?? ''),
+    dailyOrdinaryLimit:
+      v.dailyOrdinaryLimit > 0 ? String(v.dailyOrdinaryLimit) : '',
+    transportMode: v.transportMode ?? TRANSPORT_MODES[0].value,
+  };
+};
 
-export default function SettingsModal({ show, onClose }) {
+export default function SettingsModal({ show, onClose, locked = false }) {
   const { configured } = useAuth();
   const { settings, save, loading } = useSettings();
   const [form, setForm] = useState(() => empty(settings));
@@ -68,6 +73,8 @@ export default function SettingsModal({ show, onClose }) {
     const pensionRate = Number(form.pensionRate);
     const breakRaw = String(form.breakMinutes ?? '').trim();
     const breakMinutes = breakRaw === '' ? 0 : Number(breakRaw);
+    const limitRaw = String(form.dailyOrdinaryLimit ?? '').trim();
+    const dailyOrdinaryLimit = limitRaw === '' ? 0 : Number(limitRaw);
 
     if (!(value > 0)) {
       return setError(
@@ -82,6 +89,12 @@ export default function SettingsModal({ show, onClose }) {
     if (!Number.isFinite(breakMinutes) || breakMinutes < 0 || breakMinutes > 600) {
       return setError('Los minutos de descanso deben estar entre 0 y 600.');
     }
+    if (
+      limitRaw !== '' &&
+      (!Number.isFinite(dailyOrdinaryLimit) || dailyOrdinaryLimit < 1 || dailyOrdinaryLimit > 12)
+    ) {
+      return setError('El límite de horas ordinarias al día debe estar entre 1 y 12.');
+    }
 
     setSaving(true);
     setError('');
@@ -93,11 +106,14 @@ export default function SettingsModal({ show, onClose }) {
         pensionRate,
         contractType: form.contractType,
         breakMinutes: Math.round(breakMinutes),
+        dailyOrdinaryLimit:
+          limitRaw === '' ? DAILY_ORDINARY_LIMIT : Math.round(dailyOrdinaryLimit),
         transportMode: TRANSPORT_MODES.some((m) => m.value === form.transportMode)
           ? form.transportMode
           : 'proporcional',
       });
       setSaved(true);
+      if (locked) onClose(); // onboarding: solo se cierra con datos guardados
     } catch (err) {
       setError(err.message);
     } finally {
@@ -111,6 +127,7 @@ export default function SettingsModal({ show, onClose }) {
     <Modal
       show={show}
       onClose={onClose}
+      dismissible={!locked}
       title={
         <>
           <i className="bi bi-person-badge me-1 text-indigo" />
@@ -118,13 +135,20 @@ export default function SettingsModal({ show, onClose }) {
         </>
       }
     >
-      <p className="small text-secondary mb-4">
-        Configura tu base una vez: se usará en cada cálculo de nómina.
-      </p>
+      {locked ? (
+        <div className="alert alert-info py-2 small" role="alert">
+          <i className="bi bi-exclamation-circle me-1" />
+          Completa y guarda tus datos laborales para usar Horasapp: así podrás registrar tus turnos y calcular tu nómina.
+        </div>
+      ) : (
+        <p className="small text-secondary mb-4">
+          Configura tu base una vez: se usará en cada cálculo de nómina.
+        </p>
+      )}
 
       {!configured && (
         <div className="alert alert-warning py-2 small" role="alert">
-          Firebase sin configurado: no podrás guardar cambios.
+          Modo demo: los datos se guardan solo en esta sesión.
         </div>
       )}
       {error && (
@@ -259,7 +283,7 @@ export default function SettingsModal({ show, onClose }) {
           </div>
         </div>
 
-        <div className="mb-2">
+        <div className="mb-3">
           <label className="form-label small fw-semibold" htmlFor="set-break">
             Minutos de descanso{' '}
             <span className="text-secondary fw-normal">(opcional)</span>
@@ -277,19 +301,49 @@ export default function SettingsModal({ show, onClose }) {
             <span className="input-group-text">min/día</span>
           </div>
           <div className="form-text small">
-            Descanso no pagado por jornada: se descuenta de las horas de cada turno. Vacío o 0 = sin
-            descuento.
+            Descanso no pagado por jornada: se descuenta primero de las horas diurnas de cada turno.
+            Vacío o 0 = sin descuento.
+          </div>
+        </div>
+
+        <div className="mb-2">
+          <label className="form-label small fw-semibold" htmlFor="set-limit">
+            Límite de horas ordinarias al día{' '}
+            <span className="text-secondary fw-normal">(opcional)</span>
+          </label>
+          <div className="input-group">
+            <input
+              id="set-limit"
+              type="text"
+              inputMode="numeric"
+              className="form-control"
+              value={form.dailyOrdinaryLimit}
+              onInput={set('dailyOrdinaryLimit')}
+              placeholder={String(DAILY_ORDINARY_LIMIT)}
+            />
+            <span className="input-group-text">h/día</span>
+          </div>
+          <div className="form-text small">
+            Horas pagadas como ordinarias antes de empezar a contar extras. Por defecto{' '}
+            {DAILY_ORDINARY_LIMIT} h/día (jornada legal de 42 h/semana en 6 días → 7 h/día, Ley 2101
+            de 2021; divisor mensual ÷ {HOURS_PER_MONTH} h). Vacío = {DAILY_ORDINARY_LIMIT} h/día.
           </div>
         </div>
 
         <div className="d-flex gap-2 mt-4">
-          <button type="button" className="btn btn-outline-secondary rounded-pill px-4" onClick={onClose}>
-            Cerrar
-          </button>
+          {!locked && (
+            <button
+              type="button"
+              className="btn btn-outline-secondary rounded-pill px-4"
+              onClick={onClose}
+            >
+              Cerrar
+            </button>
+          )}
           <button
             type="submit"
             className="btn btn-brand rounded-pill px-4 flex-grow-1"
-            disabled={saving || loading || !configured}
+            disabled={saving || loading}
           >
             {saving ? <span className="spinner-border spinner-border-sm me-2" /> : <i className="bi bi-save me-1" />}
             Guardar configuración
